@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "list.h": "c"
+        "list.h": "c",
+        "page_cache.h": "c",
+        "hash.h": "c"
     }
 }

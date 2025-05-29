@@ -4,6 +4,8 @@
 #include "vm/vm.h"
 #include "vm/inspect.h"
 
+static unsigned page_hash(const struct hash_elem *e, void *aux UNUSED);
+static bool hash_less (const struct hash_elem *a,const struct hash_elem *b,void *aux);
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void
@@ -174,8 +176,7 @@ vm_do_claim_page (struct page *page) {
 /* Initialize new supplemental page table */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
-	struct supplemental_page_table *spt_table;
-	hash_init(spt_table->spt_hash,);
+	hash_init(&spt->spt_hash,page_hash,hash_less,NULL);
 	
 }
 
@@ -200,4 +201,11 @@ static unsigned
 page_hash(const struct hash_elem *e, void *aux UNUSED) {
     struct page *p = hash_entry(e, struct page, hash_elem);  // hash_elem → struct page
     return hash_bytes(&p->va, sizeof(p->va));  // va를 기준으로 해시값 생성
+}
+
+//hash 비교 함수
+static bool hash_less (const struct hash_elem *a,const struct hash_elem *b,void *aux){
+	struct page *pa = hash_entry(a, struct page, hash_elem);
+    struct page *pb = hash_entry(b, struct page, hash_elem);
+	return pa->va < pb->va;
 }
