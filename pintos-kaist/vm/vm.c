@@ -65,10 +65,14 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	struct page *page = NULL;
+	struct page *page;
 	/* TODO: Fill this function. */
+	page->va = va; // 탐색용 page에 va 넣고
 
-	return page;
+	struct hash_elem *e = hash_find(&spt->spt_hash, &page->hash_elem);//hash find안의 bucket find에서 해싱해줌
+	if (e != NULL)
+		return hash_entry(e, struct page, hash_elem);
+	return NULL;
 }
 
 /* Insert PAGE into spt with validation. */
@@ -77,6 +81,9 @@ spt_insert_page (struct supplemental_page_table *spt UNUSED,
 		struct page *page UNUSED) {
 	int succ = false;
 	/* TODO: Fill this function. */
+	if(hash_insert(&spt->spt_hash,&page->hash_elem)==NULL){//hash_insert는 성공하면 old가 중복값이 없다고 판단하여 old(NULL)을 반환함. 즉 성공하면 NULL을 반환.
+		succ=true;
+	}
 
 	return succ;
 }
@@ -114,7 +121,16 @@ static struct frame *
 vm_get_frame (void) {
 	struct frame *frame = NULL;
 	/* TODO: Fill this function. */
+	void *kva= palloc_get_page(PAL_USER);//
+	if(kva == NULL){
+		PANIC("todo"); 
+	}
+	frame = malloc(sizeof(struct frame));
+	if (frame == NULL)
+		PANIC("vm_get_frame: malloc failed");
 
+	frame->kva = kva;      // 커널 가상 주소 저장
+	frame->page = NULL;
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
 	return frame;
@@ -155,7 +171,7 @@ bool
 vm_claim_page (void *va UNUSED) {
 	struct page *page = NULL;
 	/* TODO: Fill this function */
-
+	spt_find_page(thread_current()->spt,va);//spt 테이블에서 페이지 정보 찾고,
 	return vm_do_claim_page (page);
 }
 
@@ -169,8 +185,11 @@ vm_do_claim_page (struct page *page) {
 	page->frame = frame;
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
-
-	return swap_in (page, frame->kva);
+	if(pml4_get_page(thread_current()->pml4,page->va)==NULL){//va에 대해 해당하는 물리페이지가 pml4에 매핑이 안되어있으면.
+		if(pml4_set_page(thread_current()->pml4,page->va,frame->kva,page->page_writable))return false;
+	}
+	return true;
+	//return swap_in (page, frame->kva);
 }
 
 /* Initialize new supplemental page table */
