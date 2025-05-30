@@ -46,7 +46,7 @@ struct page {
 	const struct page_operations *operations;
 	void *va;              /* Address in terms of user space */
 	struct frame *frame;   /* Back reference for frame */
-
+	bool page_writable; //rw
 	/* Your implementation */
 
 	/* Per-type data are binded into the union.
@@ -63,8 +63,8 @@ struct page {
 
 /* The representation of "frame" */
 struct frame {
-	void *kva;
-	struct page *page;
+	void *kva;//커널 가상 주소
+	struct page *page;//매핑된 페이지
 };
 
 /* The function table for page operations.

@@ -171,7 +171,7 @@ bool
 vm_claim_page (void *va UNUSED) {
 	struct page *page = NULL;
 	/* TODO: Fill this function */
-	spt_find_page(thread_current()->spt,va);//spt 테이블에서 페이지 정보 찾고,
+	page = spt_find_page(thread_current()->spt,va);//spt 테이블에서 페이지 정보 찾고,
 	return vm_do_claim_page (page);
 }
 
