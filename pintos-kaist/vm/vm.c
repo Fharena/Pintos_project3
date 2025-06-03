@@ -231,15 +231,36 @@ bool
 supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 		struct supplemental_page_table *src UNUSED) {
 	struct hash_elem *e;
-	struct hash_iterator *hash_iter;
-	hash_first(hash_iter,&src->spt_hash);
-	for (e = hash_iter->elem; e != NULL; e = hash_next(e)) {
+	struct hash_iterator hash_iter;
+	hash_first(&hash_iter,&src->spt_hash);
+	while (hash_next(&hash_iter)) {
+		e = hash_cur(&hash_iter);
         struct page *src_page = hash_entry(e, struct page, hash_elem);
         enum vm_type type = page_get_type(src_page);
         void *upage = src_page->va;           /* 복사할 페이지의 가상주소 */
         bool writable = src_page->page_writable;
-	}
+		struct page *dst_page;
+		switch (type){
+			case VM_UNINIT:
+				if(!vm_alloc_page_with_initializer(src_page->uninit.type,upage,writable,src_page->uninit.init,src_page->uninit.aux)) return false;
+			break;
+			case VM_ANON:
+				if(!vm_alloc_page_with_initializer(VM_ANON,upage,writable,anon_initializer,NULL)) return false;
+				vm_claim_page(upage);
+				dst_page=spt_find_page(dst, src_page->va);//같은 va가짐.
+				memcpy(dst_page->frame->kva,src_page->frame->kva,PGSIZE);
+			break;
+			case VM_FILE:
+				if(!vm_alloc_page_with_initializer(VM_FILE,upage,writable,file_backed_initializer,NULL)) return false;
+				vm_claim_page(upage);
+				dst_page = spt_find_page(dst, src_page->va);//같은 va가짐.
+				memcpy(dst_page->frame->kva,src_page->frame->kva,PGSIZE);
+			break;
+		}
 
+		
+	}
+	return true;
 }
 
 /* Free the resource hold by the supplemental page table */
