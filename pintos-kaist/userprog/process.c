@@ -782,10 +782,6 @@ lazy_load_segment (struct page *page, void *aux) {
 	}
 	memset(kva + page_read_bytes, 0, page_zero_bytes);
 	lock_release(&file_lock);
-    if (pml4_get_page(thread_current()->pml4, page->va) == NULL) {
-        if (!pml4_set_page(thread_current()->pml4, page->va, kva, page->page_writable))
-            return false;
-    }
 	return true;
 }
 
