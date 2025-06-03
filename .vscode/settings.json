@@ -3,6 +3,15 @@
         "list.h": "c",
         "page_cache.h": "c",
         "hash.h": "c",
-        "thread.h": "c"
+        "thread.h": "c",
+        "intrinsic.h": "c",
+        "array": "c",
+        "istream": "c",
+        "ostream": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "pte.h": "c",
+        "malloc.h": "c"
     }
 }

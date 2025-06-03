@@ -1,0 +1,29 @@
+Kernel command line: -q -f put pt-write-code run pt-write-code
+0 ~ 9fc00 1
+100000 ~ 13e0000 1
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
+	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+Calibrating timer...  157,081,600 loops/s.
+hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 102 sector (51 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+hd1:1: detected 8,064 sector (3 MB) disk, model "QEMU HARDDISK", serial "QM00004"
+Formatting file system...done.
+Boot complete.
+Putting 'pt-write-code' into the file system...
+Executing 'pt-write-code':
+(pt-write-code) begin
+Kernel PANIC at ../../vm/vm.c:145 in vm_get_frame(): todo
+Call stack: 0x8004218065 0x800422131d 0x80042215a4 0x80042214d9 0x800421ce8a 0x8004208ea1 0x80042092bf 0x400bca 0x400c13 0.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 123 ticks
+Thread: 36 idle ticks, 33 kernel ticks, 54 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 80 reads, 232 writes
+hd1:0: 102 reads, 0 writes
+hd1:1: 0 reads, 0 writes
+Console: 1235 characters output
+Key
