@@ -20,21 +20,15 @@ Executing 'lazy-file':
 (lazy-file) sizeof small: 10017
 (lazy-file) page aligned size of small: 12288
 (lazy-file) mmap "small.txt"
-(lazy-file) initial pages status
-(lazy-file) check if page is not loaded
-(lazy-file) check if page is not loaded
-(lazy-file) check if page is not loaded
-(lazy-file) load pages (3)
-(lazy-file) load page [0]
 lazy-file: exit(-1)
 Execution of 'lazy-file' complete.
-Timer: 86 ticks
-Thread: 36 idle ticks, 40 kernel ticks, 10 user ticks
+Timer: 82 ticks
+Thread: 40 idle ticks, 37 kernel ticks, 5 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 147 reads, 350 writes
 hd1:0: 151 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1394 characters output
+Console: 1187 characters output
 Keyboard: 0 keys pressed
-Exception: 1 page faults
+Exception: 0 page faults
 Powering off...

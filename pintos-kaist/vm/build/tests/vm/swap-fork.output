@@ -15,26 +15,36 @@ Putting 'swap-fork' into the file system...
 Putting 'child-swap' into the file system...
 Executing 'swap-fork':
 (swap-fork) begin
-child-swap: exit(-1)
-child-swap: exit(-1)
-child-swap: exit(-1)
-child-swap: exit(-1)
-child-swap: exit(-1)
-child-swap: exit(-1)
-child-swap: exit(-1)
-child-swap: exit(-1)
-child-swap: exit(-1)
-child-swap: exit(-1)
-(swap-fork) More than one child process' stack is corrupted: FAILED
-swap-fork: exit(1)
+(child-swap) begin
+child-swap: exit(0)
+(child-swap) begin
+child-swap: exit(0)
+(child-swap) begin
+child-swap: exit(0)
+(child-swap) begin
+child-swap: exit(0)
+(child-swap) begin
+child-swap: exit(0)
+(child-swap) begin
+child-swap: exit(0)
+(child-swap) begin
+child-swap: exit(0)
+(child-swap) begin
+child-swap: exit(0)
+(child-swap) begin
+child-swap: exit(0)
+(child-swap) begin
+child-swap: exit(0)
+(swap-fork) end
+swap-fork: exit(0)
 Execution of 'swap-fork' complete.
-Timer: 302 ticks
-Thread: 192 idle ticks, 98 kernel ticks, 12 user ticks
+Timer: 389 ticks
+Thread: 197 idle ticks, 119 kernel ticks, 73 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 114 reads, 8276 writes
+hd0:1: 575 reads, 8276 writes
 hd1:0: 4119 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1280 characters output
+Console: 1409 characters output
 Keyboard: 0 keys pressed
-Exception: 10 page faults
+Exception: 0 page faults
 Powering off...

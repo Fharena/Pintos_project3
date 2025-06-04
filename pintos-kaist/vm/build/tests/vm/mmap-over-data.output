@@ -17,16 +17,15 @@ Executing 'mmap-over-data':
 (mmap-over-data) begin
 (mmap-over-data) open "sample.txt"
 (mmap-over-data) try to mmap over data segment
-(mmap-over-data) try to mmap over data segment: FAILED
-mmap-over-data: exit(1)
+mmap-over-data: exit(-1)
 Execution of 'mmap-over-data' complete.
-Timer: 78 ticks
-Thread: 36 idle ticks, 37 kernel ticks, 5 user ticks
+Timer: 77 ticks
+Thread: 35 idle ticks, 39 kernel ticks, 4 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 111 reads, 252 writes
 hd1:0: 107 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1164 characters output
+Console: 1110 characters output
 Keyboard: 0 keys pressed
 Exception: 0 page faults
 Powering off...

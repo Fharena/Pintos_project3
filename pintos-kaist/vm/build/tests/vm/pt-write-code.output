@@ -14,16 +14,15 @@ Boot complete.
 Putting 'pt-write-code' into the file system...
 Executing 'pt-write-code':
 (pt-write-code) begin
-Kernel PANIC at ../../vm/vm.c:145 in vm_get_frame(): todo
-Call stack: 0x8004218065 0x80042213cb 0x8004221652 0x8004221587 0x800421cf38 0x8004208ea1 0x80042092bf 0x400bca 0x400c13 0.
-The `backtrace' program can make call stacks useful.
-Read "Backtraces" in the "Debugging Tools" chapter
-of the Pintos documentation for more information.
-Timer: 124 ticks
-Thread: 39 idle ticks, 32 kernel ticks, 53 user ticks
+pt-write-code: exit(-1)
+Execution of 'pt-write-code' complete.
+Timer: 74 ticks
+Thread: 36 idle ticks, 36 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 80 reads, 232 writes
 hd1:0: 102 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1235 characters output
-Key
+Console: 960 characters output
+Keyboard: 0 keys pressed
+Exception: 1 page faults
+Powering off...

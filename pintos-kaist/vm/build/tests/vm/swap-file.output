@@ -19,13 +19,13 @@ Executing 'swap-file':
 (swap-file) mmap "large.txt"
 swap-file: exit(-1)
 Execution of 'swap-file' complete.
-Timer: 583 ticks
-Thread: 391 idle ticks, 165 kernel ticks, 28 user ticks
+Timer: 502 ticks
+Thread: 341 idle ticks, 155 kernel ticks, 6 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 4032 reads, 15900 writes
+hd0:1: 120 reads, 15900 writes
 hd1:0: 7931 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1056 characters output
+Console: 1054 characters output
 Keyboard: 0 keys pressed
-Exception: 1 page faults
+Exception: 0 page faults
 Powering off...

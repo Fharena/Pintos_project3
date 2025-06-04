@@ -8,6 +8,7 @@
 #include "hash.h"
 static unsigned page_hash(const struct hash_elem *e, void *aux UNUSED);
 static bool hash_less (const struct hash_elem *a,const struct hash_elem *b,void *aux);
+void spt_destructor(struct hash_elem *e, void* aux);
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void
@@ -52,7 +53,6 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 	ASSERT (VM_TYPE(type) != VM_UNINIT)
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
-	bool *initializer = NULL;
 	/* Check wheter the upage is already occupied or not. */
 	if (spt_find_page (spt, upage) == NULL) {
 		/* TODO: Create the page, fetch the initialier according to the VM type,
@@ -85,7 +85,6 @@ spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
 	struct page *page = malloc(sizeof(struct page));
 	/* TODO: Fill this function. */
 	page->va =pg_round_down(va); // 탐색용 page에 va 넣고
-
 	struct hash_elem *e = hash_find(&spt->spt_hash, &page->hash_elem);//hash find안의 bucket find에서 해싱해줌
 	free(page);
 	if (e != NULL)
@@ -175,11 +174,16 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	/* TODO: Your code goes here */
 	if (addr == NULL||is_kernel_vaddr(addr))
     	return false;
-	page = spt_find_page(spt, addr);
-	if (page == NULL) {
-		return false;
-}
-	return vm_do_claim_page (page);
+	if (not_present)
+    {
+		page = spt_find_page(spt, addr);
+		if (!page || (write && !page->page_writable)){
+			return false;
+		}
+			
+		return vm_do_claim_page(page);
+    }
+    return false;
 }
 
 /* Free the page.
@@ -216,7 +220,8 @@ vm_do_claim_page (struct page *page) {
 		if(!pml4_set_page(thread_current()->pml4,page->va,frame->kva,page->page_writable))return false;
 	}
 	// return true;
-	return swap_in (page, frame->kva);
+	bool ok = swap_in (page, frame->kva);
+	return ok;
 }
 
 /* Initialize new supplemental page table */
@@ -232,35 +237,35 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 		struct supplemental_page_table *src UNUSED) {
 	struct hash_elem *e;
 	struct hash_iterator hash_iter;
+	bool succ = true;
 	hash_first(&hash_iter,&src->spt_hash);
 	while (hash_next(&hash_iter)) {
 		e = hash_cur(&hash_iter);
         struct page *src_page = hash_entry(e, struct page, hash_elem);
-        enum vm_type type = page_get_type(src_page);
-        void *upage = src_page->va;           /* 복사할 페이지의 가상주소 */
+		void *upage = src_page->va;
+        enum vm_type type = src_page->operations->type;
         bool writable = src_page->page_writable;
 		struct page *dst_page;
-		switch (type){
-			case VM_UNINIT:
-				if(!vm_alloc_page_with_initializer(src_page->uninit.type,upage,writable,src_page->uninit.init,src_page->uninit.aux)) return false;
-			break;
-			case VM_ANON:
-				if(!vm_alloc_page_with_initializer(VM_ANON,upage,writable,anon_initializer,NULL)) return false;
-				vm_claim_page(upage);
-				dst_page=spt_find_page(dst, src_page->va);//같은 va가짐.
-				memcpy(dst_page->frame->kva,src_page->frame->kva,PGSIZE);
-			break;
-			case VM_FILE:
-				if(!vm_alloc_page_with_initializer(VM_FILE,upage,writable,file_backed_initializer,NULL)) return false;
-				vm_claim_page(upage);
-				dst_page = spt_find_page(dst, src_page->va);//같은 va가짐.
-				memcpy(dst_page->frame->kva,src_page->frame->kva,PGSIZE);
-			break;
-		}
 
-		
-	}
-	return true;
+		//aux값을 이렇게 넘길 수 있는지 의문
+        switch (type){
+            case VM_UNINIT:
+                if(!vm_alloc_page_with_initializer(src_page->uninit.type, upage, writable, src_page->uninit.init, src_page->uninit.aux)) succ = false;
+				if (src_page->frame){
+					if(!vm_claim_page(upage))succ = false;
+					dst_page = spt_find_page(dst, src_page->va);
+                	memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+				}
+            break;
+			default:
+				if(!vm_alloc_page_with_initializer(type, upage, writable, NULL, NULL)) succ = false;
+                if(!vm_claim_page(upage))succ = false;
+                dst_page = spt_find_page(dst, src_page->va);
+                memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+			break;
+        }
+    }
+	return succ;
 }
 
 /* Free the resource hold by the supplemental page table */
@@ -268,18 +273,12 @@ void
 supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage. */
-	// 	struct hash_iterator i;
+	struct hash_iterator hash_iter;
+	struct hash_elem *e;
 
-    // hash_first (&i, &spt->pages);
-    // while (hash_next (&i)) {
-    //     struct page *page = hash_entry (hash_cur (&i), struct page, hash_elem);
-
-    //     if (page->operations->type == VM_FILE) {
-    //         do_munmap(page->va);
-    //         // destroy(page);
-    //     }
-    // }
-    // hash_destroy(&spt->pages,);
+	lock_acquire(&hash_lock);	
+	hash_destroy(&spt->spt_hash, spt_destructor);
+	lock_release(&hash_lock);
 }
 
 
@@ -297,4 +296,10 @@ static bool hash_less (const struct hash_elem *a,const struct hash_elem *b,void 
 	struct page *pa = hash_entry(a, struct page, hash_elem);
     struct page *pb = hash_entry(b, struct page, hash_elem);
 	return pa->va < pb->va;
+}
+
+void spt_destructor(struct hash_elem *e, void* aux){
+    const struct page *p = hash_entry(e, struct page, hash_elem);
+    destroy(p);
+	free(p);
 }
