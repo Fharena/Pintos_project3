@@ -823,7 +823,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		aux->read_bytes = page_read_bytes;
 		aux->zero_bytes = page_zero_bytes;
 		
-		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
+		if (!vm_alloc_page_with_initializer (VM_FILE, upage,
 					writable, lazy_load_segment, aux))
 			return false;
 
@@ -847,6 +847,7 @@ setup_stack (struct intr_frame *if_) {
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
 	if (vm_alloc_page(VM_ANON | VM_MARKER_0, stack_bottom, true)) {
+		thread_current()->stack_bottom = stack_bottom;
 		if (vm_claim_page(stack_bottom)) {
 			if_->rsp = USER_STACK;
 			success = true;

@@ -36,6 +36,7 @@ int sys_open(char *filename);
 bool sys_remove(char *filename);
 int sys_filesize(int fd);
 void check_valid_range(void *addr, size_t size);
+static void check_writable_range(void *addr, size_t size);
 
 
 /* System call.
@@ -268,6 +269,7 @@ sys_read(int fd, void *buffer, size_t size){
 	if(size == 0){
 		return 0;
 	}
+	check_writable_range(buffer,size);
 
 	check_valid_range(buffer,size);
 
@@ -383,6 +385,19 @@ void check_address(void *addr){
 }
 
 #else
+static void
+check_writable_range(void *addr, size_t size) {
+	uint8_t *ptr = addr;
+	struct thread *curr = thread_current();
+	struct supplemental_page_table *spt = &curr->spt;
+
+	for (size_t i = 0; i < size; i+PGSIZE) {
+		struct page *page = spt_find_page(spt, ptr + i);
+		if (page == NULL || !page->page_writable) {
+			sys_exit(-1);  // 보안 위반 시 즉시 종료
+		}
+	}
+}
 
 struct page *check_address(void *addr){
 	// struct thread *curr = thread_current();
