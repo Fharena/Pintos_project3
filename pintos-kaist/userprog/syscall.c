@@ -16,6 +16,9 @@
 #include <stdio.h>
 #include "threads/thread.h"
 
+#include "include/vm/vm.h"
+
+
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 
@@ -32,7 +35,8 @@ bool sys_create(char*filename, unsigned size);
 int sys_open(char *filename);
 bool sys_remove(char *filename);
 int sys_filesize(int fd);
-
+void check_valid_range(void *addr, size_t size);
+static void check_writable_range(void *addr, size_t size);
 
 
 /* System call.
@@ -60,7 +64,6 @@ syscall_init (void) {
 	write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 
-	// lock_init(&file_lock);
 }
 
 /* The main system call interface */
@@ -135,9 +138,16 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			f->R.rax = sys_tell((int)f->R.rdi);
 			break;
 		}
+		case SYS_CLOSE: {
+			int fd = (int) f->R.rdi;
+			sys_close(fd);
+			break;
+		}
+		default:
+            sys_exit(-1);
 	}
-
 	// thread_exit ();
+
 }
 
 void
@@ -153,13 +163,9 @@ sys_wait(tid_t pid){
 int
 sys_exec(const char *file){
 
-	struct thread* curr = thread_current();
-	
-	if(!is_user_vaddr(file) || pml4_get_page(curr->pml4, file) ==NULL || file == NULL){
-		sys_exit(-1);
-	}
-	
-	char *file_name = palloc_get_page(4);
+	check_address(file);
+
+	char *file_name = palloc_get_page(PAL_ZERO);
 	if (file_name == NULL){
 		palloc_free_page(file_name);
 		file_name = NULL;
@@ -179,10 +185,7 @@ sys_exec(const char *file){
 tid_t
 sys_fork(char *thread_name, struct intr_frame *if_){
 
-	struct thread * curr = thread_current();
-	if(!is_user_vaddr(thread_name) || pml4_get_page(curr->pml4, thread_name) ==NULL || thread_name == NULL){
-		sys_exit(-1);
-	}
+	check_address(thread_name);
 
 	tid_t child_tid = process_fork(thread_name, if_);
 	
@@ -195,10 +198,8 @@ sys_fork(char *thread_name, struct intr_frame *if_){
 
 bool
 sys_create(char* filename, unsigned size){
-	struct thread* curr = thread_current();
-	if(!is_user_vaddr(filename) || pml4_get_page(curr->pml4, filename) ==NULL || filename == NULL){
-		sys_exit(-1);
-	}
+
+	check_address(filename);
 
 	if(strlen(filename) > 14) return 0;
 
@@ -211,10 +212,8 @@ sys_create(char* filename, unsigned size){
 
 int
 sys_open(char* filename){
-	struct thread * curr = thread_current();
-	if(filename == NULL || !is_user_vaddr(filename) || pml4_get_page(curr->pml4, filename) == NULL ){
-		sys_exit(-1);
-	}
+
+	check_address(filename);
 
 	struct thread *cur = thread_current();
 	//file descriptor 할당
@@ -270,10 +269,8 @@ sys_read(int fd, void *buffer, size_t size){
 	if(size == 0){
 		return 0;
 	}
-
-	if(buffer == NULL || !is_user_vaddr(buffer) || pml4_get_page(curr->pml4, buffer)==NULL){
-		sys_exit(-1);
-	}
+	check_writable_range(buffer,size);
+	check_valid_range(buffer,size);
 
 	if((fd<0) || (fd>=127)){
 		return -1;
@@ -294,7 +291,7 @@ sys_read(int fd, void *buffer, size_t size){
 		if(file == NULL){
 			return -1;
 		}
-
+		// check_writable_range(buffer,size);
 		lock_acquire(&file_lock);
 		off_t result = file_read(file, buffer, size);
 		lock_release(&file_lock);
@@ -304,13 +301,7 @@ sys_read(int fd, void *buffer, size_t size){
 
 int
 sys_write(int fd, void* buf, size_t size){
-	struct thread *curr = thread_current();
-	if(buf == NULL){
-		sys_exit(-1);
-	}
-	if(!is_user_vaddr(buf) || pml4_get_page(curr->pml4, buf)==NULL){
-		sys_exit(-1);
-	}
+	check_valid_range(buf,size);
 	if((fd<=0) || (fd>=127)){
 		return -1;
 	}
@@ -350,14 +341,13 @@ sys_close(int fd){
 	lock_acquire(&file_lock);
 	file_close(file);	
 	lock_release(&file_lock);
+	cur->file_table[fd] = NULL;
 }
 
 bool
 sys_remove(char* filename){
-	struct thread* curr = thread_current();
-	if(!is_user_vaddr(filename) || pml4_get_page(curr->pml4, filename) == NULL){
-		sys_exit(-1);
-	}
+	
+	check_address(filename);
 
 	lock_acquire(&file_lock);
 	int result = filesys_remove(filename);
@@ -381,3 +371,69 @@ sys_tell(int fd){
 		return (unsigned)-1;
 	file_tell(f);
 }
+
+
+#ifndef VM
+void check_address(void *addr){
+	struct thread *curr = thread_current();
+
+	if(!is_user_vaddr(addr) || addr == NULL ||pml4_get_page(curr->pml4, addr) == NULL){
+		sys_exit(-1);
+	}
+}
+
+#else
+static void
+check_writable_range(void *addr, size_t size) {
+	uint8_t *ptr = addr;
+	struct thread *curr = thread_current();
+	struct supplemental_page_table *spt = &curr->spt;
+	for (size_t i = 0; i < size; i+=PGSIZE) {
+		struct page *page = spt_find_page(spt, ptr + i);
+		if (page == NULL || !page->page_writable) {
+			sys_exit(-1);  // 보안 위반 시 즉시 종료
+		}
+	}
+}
+
+struct page *check_address(void *addr){
+	// struct thread *curr = thread_current();
+
+	// if(!is_user_vaddr(addr) || addr == NULL || !spt_find_page(&curr->spt, addr) || !is_user_vaddr(addr+PGSIZE-1)){
+	// 	sys_exit(-1);
+	// }
+
+	// return spt_find_page(&curr->spt, addr);
+	struct thread *curr = thread_current();
+	if (addr == NULL || !is_user_vaddr(addr))
+		sys_exit(-1);
+
+	struct page *page = spt_find_page(&curr->spt, addr);
+	if (page == NULL)
+		sys_exit(-1);
+	if(pml4_get_page(curr->pml4, addr) == NULL){
+			if(!vm_claim_page(addr)){
+				sys_exit(-1);
+			}
+	}
+	return page;
+}
+
+void check_valid_range(void *addr, size_t size) {
+    uint8_t *start = (uint8_t *)pg_round_down(addr);
+    uint8_t *end = (uint8_t *)pg_round_down(addr + size - 1);
+
+    for (uint8_t *p = start; p <= end; p += PGSIZE) {
+        if (!is_user_vaddr(p))
+            sys_exit(-1);
+        struct page *page = spt_find_page(&thread_current()->spt, p);
+        	if (page == NULL)
+		sys_exit(-1);
+		if(pml4_get_page(thread_current()->pml4, addr) == NULL){
+			if(!vm_claim_page(addr)){
+				sys_exit(-1);
+			}
+		}
+    }
+}
+#endif

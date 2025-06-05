@@ -267,6 +267,7 @@ process_exec (void *f_name) {
 
 	/* We first kill the current context */
 	process_cleanup ();
+	supplemental_page_table_init(&thread_current()->spt);
 
 	// printf("%s\n", *file_name);
 
@@ -773,14 +774,13 @@ lazy_load_segment (struct page *page, void *aux) {
 	off_t offset = info->offset;
 	size_t page_read_bytes = info->read_bytes;
 	size_t page_zero_bytes = info->zero_bytes;
-	lock_acquire(&file_lock);
-	file_seek (info->file, offset);
+	// lock_acquire(&file_lock);
 	if (file_read_at(info->file, kva, page_read_bytes, offset) != (int)page_read_bytes){
-		lock_release(&file_lock);
+		// lock_release(&file_lock);
 		return false;
 	}
 	memset(kva + page_read_bytes, 0, page_zero_bytes);
-	lock_release(&file_lock);
+	// lock_release(&file_lock);
 	return true;
 }
 
@@ -846,7 +846,8 @@ setup_stack (struct intr_frame *if_) {
 	 * TODO: If success, set the rsp accordingly.
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
-	if (vm_alloc_page(VM_FILE | VM_MARKER_0, stack_bottom, true)) {
+	if (vm_alloc_page(VM_ANON | VM_MARKER_0, stack_bottom, true)) {
+		thread_current()->stack_bottom = stack_bottom;
 		if (vm_claim_page(stack_bottom)) {
 			if_->rsp = USER_STACK;
 			success = true;
