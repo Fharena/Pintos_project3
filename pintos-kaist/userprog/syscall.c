@@ -270,7 +270,6 @@ sys_read(int fd, void *buffer, size_t size){
 		return 0;
 	}
 	check_writable_range(buffer,size);
-
 	check_valid_range(buffer,size);
 
 	if((fd<0) || (fd>=127)){
@@ -292,7 +291,7 @@ sys_read(int fd, void *buffer, size_t size){
 		if(file == NULL){
 			return -1;
 		}
-
+		// check_writable_range(buffer,size);
 		lock_acquire(&file_lock);
 		off_t result = file_read(file, buffer, size);
 		lock_release(&file_lock);
@@ -302,7 +301,6 @@ sys_read(int fd, void *buffer, size_t size){
 
 int
 sys_write(int fd, void* buf, size_t size){
-
 	check_valid_range(buf,size);
 	if((fd<=0) || (fd>=127)){
 		return -1;
@@ -390,8 +388,7 @@ check_writable_range(void *addr, size_t size) {
 	uint8_t *ptr = addr;
 	struct thread *curr = thread_current();
 	struct supplemental_page_table *spt = &curr->spt;
-
-	for (size_t i = 0; i < size; i+PGSIZE) {
+	for (size_t i = 0; i < size; i+=PGSIZE) {
 		struct page *page = spt_find_page(spt, ptr + i);
 		if (page == NULL || !page->page_writable) {
 			sys_exit(-1);  // 보안 위반 시 즉시 종료
