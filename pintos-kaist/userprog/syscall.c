@@ -396,10 +396,14 @@ void *sys_mmap (void *addr, size_t length, int writable, int fd, off_t offset){
 	//유효성 검사를 다해야 할듯
 	//fd로 열린 파일의 오프셋 바이트부터 length 바이트 만큼을 프로세스의 가상주소 공간의 주소 addr에 매핑한다.
 	//전체 파일은 addr에서 시작하는 연속 가상 페이지에 매핑된다.
-	if (!addr || is_kernel_vaddr(addr) || is_kernel_vaddr(addr + length))
+	if (!addr || !is_user_vaddr(addr) || !is_user_vaddr(addr + length-1))
         return NULL;
 
 	if((uintptr_t)addr % 4096 != 0){
+		return NULL;
+		
+	}
+	if((uintptr_t)offset % 4096 != 0){
 		return NULL;
 		
 	}

@@ -18,12 +18,12 @@ Executing 'swap-file':
 (swap-file) open "large.txt"
 (swap-file) mmap "large.txt"
 Kernel PANIC at ../../vm/vm.c:144 in vm_get_frame(): todo
-Call stack: 0x8004218065 0x800422159a 0x80042218f5 0x800422182a 0x800421ce68 0x8004208ea1 0x80042092bf 0x4001f3 0x400d85 0x400dce 0.
+Call stack: 0x800421804f 0x80042215a1 0x80042218fc 0x8004221831 0x800421ce52 0x8004208ea1 0x80042092bf 0x4001f3 0x400d85 0x400dce 0.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 686 ticks
-Thread: 457 idle ticks, 169 kernel ticks, 60 user ticks
+Timer: 664 ticks
+Thread: 449 idle ticks, 154 kernel ticks, 61 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 7728 reads, 15900 writes
 hd1:0: 7931 reads, 0 writes

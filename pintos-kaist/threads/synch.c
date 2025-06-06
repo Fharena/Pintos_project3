@@ -268,6 +268,35 @@ lock_try_acquire (struct lock *lock) {
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to release a lock within an interrupt
    handler. */
+//    void
+// lock_release (struct lock *lock) {
+// 	ASSERT (lock != NULL);
+// 	ASSERT (lock_held_by_current_thread (lock));
+
+// //When the lock is released, remove the thread that holds the lock 
+// //on donation list and set priority properly.
+//    struct thread *t;
+//    t = lock->holder;
+// 	lock->holder = NULL;
+//    enum intr_level old_level = intr_disable();
+//    //donation 리스트 순회하면서 지금 wait_on_lock이 해제하는 lock인 애들을 remove list(d_elem)
+//    struct list_elem *cur_d_elem = list_begin (&t->donations);//리스트 시작지점
+//    struct list_elem *next_d_elem;
+//    while(cur_d_elem != list_end(&t->donations)){//도네이션 리스트 순회
+//       struct thread *cur_t = list_entry(cur_d_elem,struct thread, donation_elem);
+//       next_d_elem = list_next(cur_d_elem);
+//       if(cur_t->wait_on_lock == lock){
+//          list_remove(cur_d_elem);
+//          cur_t->wait_on_lock = NULL;
+//       }
+      
+//       cur_d_elem = next_d_elem;
+//    }
+//    update_donations_priority();
+// 	sema_up (&lock->semaphore);//세마 업 시에 선점을 하는데 sema업이 빠르면 바뀌지 않은 상태로 선점을 진행함 (언블럭 이후 선점함)
+//    intr_set_level (old_level);
+// }
+
 void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
@@ -281,26 +310,21 @@ lock_release (struct lock *lock) {
 }
 
 void
-remove_donor(struct lock *lock){
-	struct list *donations = &(thread_current()->donations);
-	struct list_elem *donor_elem;
-	struct thread *donor_thread;
+remove_donor(struct lock *lock) {
+    struct list *donations = &thread_current()->donations;
+    struct list_elem *e = list_begin(donations);
 
-	if (list_empty(donations)){
-		return;
-	}
+    while (e != list_end(donations)) {
+        struct thread *t = list_entry(e, struct thread, donation_elem);
+        struct list_elem *next = list_next(e);
 
-	donor_elem = list_front(donations); //donations first elem
-	while(1){
-		donor_thread = list_entry(donor_elem, struct thread, donation_elem);
-		if (donor_thread->wait_on_lock == lock){
-			list_remove(&donor_thread->donation_elem);
-		}
-		donor_elem = list_next(donor_elem);
-		if (donor_elem == list_end(donations))
-			return;
-	}
+        if (t->wait_on_lock == lock)
+            list_remove(e);
+
+        e = next;
+    }
 }
+
 
 void
 update_donations_priority(void){

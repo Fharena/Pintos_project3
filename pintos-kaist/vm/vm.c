@@ -266,19 +266,42 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 
 		//aux값을 이렇게 넘길 수 있는지 의문
         switch (type){
-            case VM_UNINIT:
-                if(!vm_alloc_page_with_initializer(src_page->uninit.type, upage, writable, src_page->uninit.init, src_page->uninit.aux)) succ = false;
+            case VM_UNINIT:{
+
+				if(!vm_alloc_page_with_initializer(src_page->uninit.type, upage, writable, src_page->uninit.init, src_page->uninit.aux)) succ = false;
 				if (src_page->frame){
 					if(!vm_claim_page(upage))succ = false;
 					dst_page = spt_find_page(dst, src_page->va);
                 	memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
 				}
+
+			}
+				
             break;
-			default:
+			case VM_FILE:{
+				struct lazy_load_info *copy = malloc(sizeof(struct lazy_load_info));
+				copy->file = src_page->file.file;
+				copy->offset = src_page->file.offset;
+				copy->read_bytes = src_page->file.read_bytes;
+				copy->zero_bytes = src_page->file.zero_bytes;
+
+				if(!vm_alloc_page_with_initializer(type, upage, writable, NULL, copy)) {
+					free(copy);  // 실패 시 리소스 해제
+					succ = false;
+				}
+                if(!vm_claim_page(upage))succ = false;
+                dst_page = spt_find_page(dst, src_page->va);
+                memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+			}
+			break;
+			default:{
 				if(!vm_alloc_page_with_initializer(type, upage, writable, NULL, NULL)) succ = false;
                 if(!vm_claim_page(upage))succ = false;
                 dst_page = spt_find_page(dst, src_page->va);
                 memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+
+			}
+				
 			break;
         }
     }

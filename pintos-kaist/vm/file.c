@@ -25,20 +25,21 @@ vm_file_init (void) {
 bool
 file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
 	/* Set up the handler */
-	// struct lazy_load_info *aux = (struct lazy_load_info *)page->uninit.aux;
+	
 	// // aux->file = page->uninit.;
 	// // aux->offset;
 	// // aux->read_bytes;
 	// // aux->zero_bytes;
 	// memset(&page->uninit, 0, sizeof(struct uninit_page));
-	// page->operations = &file_ops;
+	page->operations = &file_ops;
 	
-	// struct file_page *file_page = &page->file;
-	// file_page->file = aux->file;
-	// file_page->offset = aux->offset;
-	// file_page->read_bytes = aux->read_bytes;
-	// file_page->zero_bytes = aux->zero_bytes;
-	// return true;
+	struct file_page *file_page = &page->file;
+	struct lazy_load_info *aux = (struct lazy_load_info *)page->uninit.aux;
+	file_page->file = aux->file;
+	file_page->offset = aux->offset;
+	file_page->read_bytes = aux->read_bytes;
+	file_page->zero_bytes = aux->zero_bytes;
+	return true;
 }
 
 /* Swap in the page by read contents from the file. */
@@ -56,10 +57,10 @@ file_backed_swap_out (struct page *page) {
 /* Destory the file backed page. PAGE will be freed by the caller. */
 static void
 file_backed_destroy (struct page *page) {
-	// struct file_page *file_page = &page->file;
-	// if(pml4_is_dirty(thread_current()->pml4,page->frame->kva)){
-	// 	file_write_at(file_page->file,page->va,file_page->read_bytes,file_page->offset);
-	// }
+	struct file_page *file_page = &page->file;
+	if(pml4_is_dirty(thread_current()->pml4,page->va)){
+		file_write_at(file_page->file,page->va,file_page->read_bytes,file_page->offset);
+	}
 	
 	 
 }
