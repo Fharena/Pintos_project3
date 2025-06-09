@@ -4,6 +4,7 @@
 #include "threads/vaddr.h"
 #include "userprog/process.h"
 #include <string.h>
+#include <stdlib.h>
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
 static void file_backed_destroy (struct page *page);
@@ -51,18 +52,30 @@ file_backed_swap_out (struct page *page) {
 /* Destory the file backed page. PAGE will be freed by the caller. */
 static void
 file_backed_destroy (struct page *page) {
-	struct file_page *file_page = &page->file;
-	if(pml4_is_dirty(thread_current()->pml4,page->va)){
-		file_write_at(file_page->file,page->frame->kva,file_page->read_bytes,file_page->offset);
-		pml4_set_dirty(thread_current()->pml4, page->va, false);
-	}
-	//     if (page->frame) {
-    //     page->frame->page = NULL;
-    //     page->frame = NULL;
-    //     free(page->frame);
-    // }
+	// struct file_page *file_page = &page->file;
+	// if(pml4_is_dirty(thread_current()->pml4,page->va)){
+	// 	file_write_at(file_page->file,page->frame->kva,file_page->read_bytes,file_page->offset);
+	// 	pml4_set_dirty(thread_current()->pml4, page->va, false);
+	// }
+	// //     if (page->frame) {
+    // //     page->frame->page = NULL;
+    // //     page->frame = NULL;
+    // //     free(page->frame);
+    // // }
 
-    pml4_clear_page(thread_current()->pml4, page->va);
+    // pml4_clear_page(thread_current()->pml4, page->va);
+	        struct file_page *file_page = &page->file;
+        if (page->frame != NULL) {
+                if (pml4_is_dirty (thread_current()->pml4, page->va)) {
+                        file_write_at (file_page->file, page->frame->kva,
+                                       file_page->read_bytes, file_page->offset);
+                        pml4_set_dirty (thread_current()->pml4, page->va, false);
+                }
+                pml4_clear_page (thread_current()->pml4, page->va);
+                palloc_free_page (page->frame->kva);
+                free (page->frame);
+                page->frame = NULL;
+        }
 	 
 }
 
@@ -75,6 +88,7 @@ do_mmap (void *addr, size_t length, int writable,
 	// size_t read_bytes;
 	size_t read_bytes = (length > file_length(file)) ? file_length(file) : length; //file 크기가 더 작은 경우도 있기때문에
 	size_t zero_bytes = PGSIZE - (read_bytes % PGSIZE);
+	if(read_bytes%PGSIZE == 0) zero_bytes = 0;
 	// size_t read_bytes = length;
 	// size_t zero_bytes = 0;
 
@@ -86,7 +100,6 @@ do_mmap (void *addr, size_t length, int writable,
 
 		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
-
 		struct lazy_load_info *read_file_load = malloc(sizeof(struct lazy_load_info));	//read_file 구조체 할당
 		read_file_load->file = file;
 		read_file_load->offset = offset;
@@ -120,6 +133,7 @@ do_munmap (void *addr) {
 	while((page = spt_find_page(&curr->spt, addr))){
 		if(page != NULL){
 			destroy(page);
+			spt_remove_page(&curr->spt, page);
 		}
 		addr += PGSIZE;
 	}

@@ -6,6 +6,7 @@
 #include "threads/vaddr.h"
 #include "threads/mmu.h"
 #include "hash.h"
+#include <string.h>
 static unsigned page_hash(const struct hash_elem *e, void *aux UNUSED);
 static bool hash_less (const struct hash_elem *a,const struct hash_elem *b,void *aux);
 void spt_destructor(struct hash_elem *e, void* aux);
@@ -82,10 +83,10 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	struct page *page = malloc(sizeof(struct page));
+	struct page page;
 	/* TODO: Fill this function. */
-	page->va =pg_round_down(va); // 탐색용 page에 va 넣고
-	struct hash_elem *e = hash_find(&spt->spt_hash, &page->hash_elem);//hash find안의 bucket find에서 해싱해줌
+	page.va =pg_round_down(va); // 탐색용 page에 va 넣고
+	struct hash_elem *e = hash_find(&spt->spt_hash, &page.hash_elem);//hash find안의 bucket find에서 해싱해줌
 	// free(page);
 	if (e != NULL)
 		return hash_entry(e, struct page, hash_elem);
@@ -108,6 +109,7 @@ spt_insert_page (struct supplemental_page_table *spt UNUSED,
 
 void
 spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
+	hash_delete (&spt->spt_hash, &page->hash_elem);
 	vm_dealloc_page (page);
 	return true;
 }
