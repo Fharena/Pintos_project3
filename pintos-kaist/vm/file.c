@@ -1,7 +1,9 @@
 /* file.c: Implementation of memory backed file object (mmaped object). */
 
 #include "vm/vm.h"
-
+#include "threads/vaddr.h"
+#include "userprog/process.h"
+#include <string.h>
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
 static void file_backed_destroy (struct page *page);
@@ -23,10 +25,21 @@ vm_file_init (void) {
 bool
 file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
 	/* Set up the handler */
-	memset(&page->uninit, 0, sizeof(struct uninit_page));
+	
+	// // aux->file = page->uninit.;
+	// // aux->offset;
+	// // aux->read_bytes;
+	// // aux->zero_bytes;
+	// memset(&page->uninit, 0, sizeof(struct uninit_page));
 	page->operations = &file_ops;
-
+	
 	struct file_page *file_page = &page->file;
+	struct lazy_load_info *aux = (struct lazy_load_info *)page->uninit.aux;
+	file_page->file = aux->file;
+	file_page->offset = aux->offset;
+	file_page->read_bytes = aux->read_bytes;
+	file_page->zero_bytes = aux->zero_bytes;
+	return true;
 }
 
 /* Swap in the page by read contents from the file. */
@@ -44,16 +57,69 @@ file_backed_swap_out (struct page *page) {
 /* Destory the file backed page. PAGE will be freed by the caller. */
 static void
 file_backed_destroy (struct page *page) {
-	struct file_page *file_page UNUSED = &page->file;
+	struct file_page *file_page = &page->file;
+	if(pml4_is_dirty(thread_current()->pml4,page->va)){
+		file_write_at(file_page->file,page->va,file_page->read_bytes,file_page->offset);
+	}
+	
+	 
 }
 
 /* Do the mmap */
 void *
 do_mmap (void *addr, size_t length, int writable,
 		struct file *file, off_t offset) {
+	void *return_addr = addr;
+
+	// size_t read_bytes;
+	size_t read_bytes = (length > file_length(file)) ? file_length(file) : length; //file 크기가 더 작은 경우도 있기때문에
+	size_t zero_bytes = PGSIZE - (read_bytes % PGSIZE);
+	// size_t read_bytes = length;
+	// size_t zero_bytes = 0;
+
+	struct thread *curr = thread_current();
+	struct page *check = spt_find_page(&curr->spt, addr);	
+	if (check != NULL) return NULL; // 중복 매핑 방지	
+
+	while(read_bytes > 0 || zero_bytes > 0){
+
+		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+		size_t page_zero_bytes = PGSIZE - page_read_bytes;
+
+		struct lazy_load_info *read_file_load = malloc(sizeof(struct lazy_load_info));	//read_file 구조체 할당
+		read_file_load->file = file;
+		read_file_load->offset = offset;
+		read_file_load->read_bytes = page_read_bytes;
+		read_file_load->zero_bytes = page_zero_bytes;
+
+		void *aux = (void *)read_file_load;
+
+		if(!vm_alloc_page_with_initializer (VM_FILE, addr, writable, lazy_load_segment, aux)){
+			free(read_file_load);
+			return NULL;
+		}
+
+		read_bytes -= page_read_bytes;
+		zero_bytes -= page_zero_bytes;
+		addr += PGSIZE;
+
+		offset += page_read_bytes;
+	}
+	return return_addr;
 }
 
 /* Do the munmap */
 void
 do_munmap (void *addr) {
+
+
+	struct thread *curr = thread_current();
+	struct page *page;
+
+	while((page = spt_find_page(&curr->spt, addr))){
+		if(page != NULL){
+			destroy(page);
+		}
+		addr += PGSIZE;
+	}
 }

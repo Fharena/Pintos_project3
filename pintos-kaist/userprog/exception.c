@@ -153,7 +153,6 @@ page_fault (struct intr_frame *f) {
 	/* Count page faults. */
 	page_fault_cnt++;
 
-
 	sys_exit(-1);
 
 

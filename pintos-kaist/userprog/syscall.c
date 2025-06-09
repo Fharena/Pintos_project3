@@ -37,7 +37,8 @@ bool sys_remove(char *filename);
 int sys_filesize(int fd);
 void check_valid_range(void *addr, size_t size);
 static void check_writable_range(void *addr, size_t size);
-
+void *sys_mmap (void *addr, size_t length, int writable, int fd, off_t offset);
+void sys_munmap(void *addr);
 
 /* System call.
  *
@@ -141,6 +142,14 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		case SYS_CLOSE: {
 			int fd = (int) f->R.rdi;
 			sys_close(fd);
+			break;
+		}
+		case SYS_MMAP:{
+			f->R.rax = sys_mmap(f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8);
+            break;
+		}
+		case SYS_MUNMAP:{
+			sys_munmap(f->R.rdi);
 			break;
 		}
 		default:
@@ -383,6 +392,51 @@ void check_address(void *addr){
 }
 
 #else
+void *sys_mmap (void *addr, size_t length, int writable, int fd, off_t offset){
+	//유효성 검사를 다해야 할듯
+	//fd로 열린 파일의 오프셋 바이트부터 length 바이트 만큼을 프로세스의 가상주소 공간의 주소 addr에 매핑한다.
+	//전체 파일은 addr에서 시작하는 연속 가상 페이지에 매핑된다.
+	if (!addr || !is_user_vaddr(addr) || !is_user_vaddr(addr + length-1))
+        return NULL;
+
+	if((uintptr_t)addr % 4096 != 0){
+		return NULL;
+		
+	}
+	if((uintptr_t)offset % 4096 != 0){
+		return NULL;
+		
+	}
+
+	if(fd == 0 || fd == 1){
+		return NULL;
+		
+	}
+
+	struct thread* curr = thread_current();
+	struct file* open_file = is_open_file(curr, fd);
+	if(open_file == NULL || length == 0){
+		return NULL;
+
+	}
+	lock_acquire(&file_lock);
+	struct file *reopen_file = file_reopen(open_file); //각 매핑에 대해 파일에 대한 별도의 독립적인 참조를 얻으려면 이 함수를 사용해야합니다.
+	lock_release(&file_lock);
+    if (reopen_file == NULL) {
+        return NULL;
+    }
+	return do_mmap(addr, length, writable, reopen_file, offset);
+}
+
+
+void sys_munmap(void *addr){
+	do_munmap(addr);
+	return;
+}
+
+
+
+
 static void
 check_writable_range(void *addr, size_t size) {
 	uint8_t *ptr = addr;
@@ -405,12 +459,16 @@ struct page *check_address(void *addr){
 
 	// return spt_find_page(&curr->spt, addr);
 	struct thread *curr = thread_current();
-	if (addr == NULL || !is_user_vaddr(addr))
+	if (addr == NULL || !is_user_vaddr(addr)){
 		sys_exit(-1);
+	}
+
 
 	struct page *page = spt_find_page(&curr->spt, addr);
-	if (page == NULL)
+	if (page == NULL){
 		sys_exit(-1);
+	}
+		
 	if(pml4_get_page(curr->pml4, addr) == NULL){
 			if(!vm_claim_page(addr)){
 				sys_exit(-1);
