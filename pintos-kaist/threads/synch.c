@@ -213,26 +213,54 @@ void
 lock_acquire (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
-	ASSERT (!lock_held_by_current_thread (lock));
+	// ASSERT (!lock_held_by_current_thread (lock));
+	if(lock_held_by_current_thread (lock)) return;
 
-	struct thread *curr = thread_current();
-	if (lock->holder != NULL){
-		curr->wait_on_lock = lock;
-		list_insert_ordered(&lock->holder->donations, &curr->donation_elem,
-							cmp_donate_priority, NULL);
-		int curr_priority = curr->priority; //current thread priority
-		struct thread *cur_holder;
-		while (curr->wait_on_lock != NULL){
-			cur_holder = curr->wait_on_lock->holder;
-			cur_holder->priority = curr_priority;
-			curr = cur_holder;
-		}
-	}
-	sema_down (&lock->semaphore);
+	// struct thread *curr = thread_current();
+	// if (lock->holder != NULL){
+	// 	curr->wait_on_lock = lock;
+	// 	list_insert_ordered(&lock->holder->donations, &curr->donation_elem,
+	// 						cmp_donate_priority, NULL);
+	// 	int curr_priority = curr->priority; //current thread priority
+	// 	struct thread *cur_holder;
+	// 	while (curr->wait_on_lock != NULL){
+	// 		cur_holder = curr->wait_on_lock->holder;
+	// 		// if(cur_holder == NULL) break; //project3 추가
+	// 		cur_holder->priority = curr_priority;
+	// 		curr = cur_holder;
+	// 	}
+	// }
+	// sema_down (&lock->semaphore);
 
-	curr->wait_on_lock = NULL;
+	// thread_current()->wait_on_lock = NULL;
 
-	lock->holder = thread_current ();
+	// lock->holder = thread_current ();
+
+        struct thread *curr = thread_current();
+        struct thread *prev_holder = lock->holder;
+
+        if (prev_holder != NULL){
+                curr->wait_on_lock = lock;
+                list_insert_ordered(&prev_holder->donations, &curr->donation_elem,
+                                                        cmp_donate_priority, NULL);
+                int curr_priority = curr->priority; //current thread priority
+                struct thread *holder = prev_holder;
+                while (holder->wait_on_lock != NULL){
+                        holder->priority = curr_priority;
+                        holder = holder->wait_on_lock->holder;
+                        if (holder == NULL)
+                                break;
+                }
+                if (holder != NULL)
+                        holder->priority = curr_priority;
+        }
+        sema_down (&lock->semaphore);
+
+        if (prev_holder != NULL && curr->wait_on_lock != NULL)
+                list_remove(&curr->donation_elem);
+        curr->wait_on_lock = NULL;
+
+        lock->holder = thread_current ();
 }
 
 bool
@@ -318,8 +346,12 @@ remove_donor(struct lock *lock) {
         struct thread *t = list_entry(e, struct thread, donation_elem);
         struct list_elem *next = list_next(e);
 
-        if (t->wait_on_lock == lock)
-            list_remove(e);
+        // if (t->wait_on_lock == lock)
+        //     list_remove(e);
+		if (t->wait_on_lock == lock) {
+			list_remove(e);
+			t->wait_on_lock = NULL;
+        }
 
         e = next;
     }

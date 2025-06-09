@@ -1,4 +1,5 @@
 #include "threads/thread.h"
+#include <stdlib.h>
 #include <debug.h>
 #include <stddef.h>
 #include <random.h>
@@ -74,7 +75,7 @@ static bool
 cmp_priority(const struct list_elem *a, const struct list_elem *b,
 				 void *aux);
 
-int64_t global_tick = INT64_MAX;
+extern int64_t global_tick = INT64_MAX;
 
 	/* Returns true if T appears to point to a valid thread. */
 	#define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
