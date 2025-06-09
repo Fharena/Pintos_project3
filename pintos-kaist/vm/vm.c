@@ -86,7 +86,7 @@ spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
 	/* TODO: Fill this function. */
 	page->va =pg_round_down(va); // 탐색용 page에 va 넣고
 	struct hash_elem *e = hash_find(&spt->spt_hash, &page->hash_elem);//hash find안의 bucket find에서 해싱해줌
-	free(page);
+	// free(page);
 	if (e != NULL)
 		return hash_entry(e, struct page, hash_elem);
 	return NULL;
@@ -139,13 +139,14 @@ static struct frame *
 vm_get_frame (void) {
 	struct frame *frame = NULL;
 	/* TODO: Fill this function. */
-	void *kva= palloc_get_page(PAL_USER);//
-	if(kva == NULL){
-		PANIC("todo"); 
-	}
 	frame = malloc(sizeof(struct frame));
 	if (frame == NULL)
 		PANIC("vm_get_frame: malloc failed");
+	void *kva= palloc_get_page(PAL_USER);//
+	if(kva == NULL){
+		frame = vm_evict_frame();
+	}
+
 
 	frame->kva = kva;      // 커널 가상 주소 저장
 	frame->page = NULL;

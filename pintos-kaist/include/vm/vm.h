@@ -2,6 +2,8 @@
 #define VM_VM_H
 #include <stdbool.h>
 #include "threads/palloc.h"
+#include "threads/synch.h"
+#include "list.h"
 
 enum vm_type {
 	/* page not initialized */

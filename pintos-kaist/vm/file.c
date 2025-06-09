@@ -25,12 +25,6 @@ vm_file_init (void) {
 bool
 file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
 	/* Set up the handler */
-	
-	// // aux->file = page->uninit.;
-	// // aux->offset;
-	// // aux->read_bytes;
-	// // aux->zero_bytes;
-	// memset(&page->uninit, 0, sizeof(struct uninit_page));
 	page->operations = &file_ops;
 	
 	struct file_page *file_page = &page->file;
@@ -59,9 +53,16 @@ static void
 file_backed_destroy (struct page *page) {
 	struct file_page *file_page = &page->file;
 	if(pml4_is_dirty(thread_current()->pml4,page->va)){
-		file_write_at(file_page->file,page->va,file_page->read_bytes,file_page->offset);
+		file_write_at(file_page->file,page->frame->kva,file_page->read_bytes,file_page->offset);
+		pml4_set_dirty(thread_current()->pml4, page->va, false);
 	}
-	
+	//     if (page->frame) {
+    //     page->frame->page = NULL;
+    //     page->frame = NULL;
+    //     free(page->frame);
+    // }
+
+    pml4_clear_page(thread_current()->pml4, page->va);
 	 
 }
 
