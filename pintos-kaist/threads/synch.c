@@ -241,6 +241,11 @@ lock_acquire (struct lock *lock) {
 
         if (prev_holder != NULL){
                 curr->wait_on_lock = lock;
+				if (curr->donation_elem.prev != NULL && curr->donation_elem.next != NULL){
+                        list_remove(&curr->donation_elem);
+						curr->donation_elem.prev = NULL;
+                        curr->donation_elem.next = NULL;
+                }
                 list_insert_ordered(&prev_holder->donations, &curr->donation_elem,
                                                         cmp_donate_priority, NULL);
                 int curr_priority = curr->priority; //current thread priority
@@ -258,6 +263,13 @@ lock_acquire (struct lock *lock) {
 
         if (prev_holder != NULL && curr->wait_on_lock != NULL)
                 list_remove(&curr->donation_elem);
+		if (prev_holder != NULL && curr->wait_on_lock != NULL){
+                if (curr->donation_elem.prev != NULL && curr->donation_elem.next != NULL){
+                        list_remove(&curr->donation_elem);
+                        curr->donation_elem.prev = NULL;
+                        curr->donation_elem.next = NULL;
+                }
+        }
         curr->wait_on_lock = NULL;
 
         lock->holder = thread_current ();
@@ -350,6 +362,8 @@ remove_donor(struct lock *lock) {
         //     list_remove(e);
 		if (t->wait_on_lock == lock) {
 			list_remove(e);
+			t->donation_elem.prev = NULL;
+            t->donation_elem.next = NULL;
 			t->wait_on_lock = NULL;
         }
 
