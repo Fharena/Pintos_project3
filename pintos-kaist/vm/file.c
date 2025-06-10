@@ -127,7 +127,8 @@ do_mmap (void *addr, size_t length, int writable,
 	// size_t read_bytes;
 size_t file_bytes = file_length (file);
         size_t read_bytes = length < file_bytes ? length : file_bytes;
-        size_t zero_bytes = length - read_bytes;
+        // size_t zero_bytes = length - read_bytes;
+		size_t zero_bytes = (PGSIZE - (read_bytes % PGSIZE)) % PGSIZE;
 	// size_t read_bytes = length;
 	// size_t zero_bytes = 0;
 
@@ -138,9 +139,10 @@ size_t file_bytes = file_length (file);
 	while(read_bytes > 0 || zero_bytes > 0){
 
 		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+		// size_t page_zero_bytes = PGSIZE - page_read_bytes;
+        //         if (zero_bytes < page_zero_bytes)
+        //                 page_zero_bytes = zero_bytes;
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
-                if (zero_bytes < page_zero_bytes)
-                        page_zero_bytes = zero_bytes;
 		struct lazy_load_info *read_file_load = malloc(sizeof(struct lazy_load_info));	//read_file 구조체 할당
 		read_file_load->file = file;
 		read_file_load->offset = offset;

@@ -148,22 +148,42 @@ vm_evict_frame (void) {
  * space.*/
 static struct frame *
 vm_get_frame (void) {
-	struct frame *frame = NULL;
-	/* TODO: Fill this function. */
-	frame = malloc(sizeof(struct frame));
-	if (frame == NULL)
-		PANIC("vm_get_frame: malloc failed");
-	void *kva= palloc_get_page(PAL_USER);//
-	if(kva == NULL){
-		frame = vm_evict_frame();
-	}
+	// struct frame *frame = NULL;
+	// /* TODO: Fill this function. */
+	// frame = malloc(sizeof(struct frame));
+	// if (frame == NULL)
+	// 	PANIC("vm_get_frame: malloc failed");
+	// void *kva= palloc_get_page(PAL_USER);//
+	// if(kva == NULL){
+	// 	frame = vm_evict_frame();
+	// }
+	// else
+    // list_push_back(&frame_table, &frame->frame_elem);
 
+	// frame->kva = kva;      // 커널 가상 주소 저장
+	// frame->page = NULL;
+	// ASSERT (frame != NULL);
+	// ASSERT (frame->page == NULL);
+	// return frame;
+	void *kva = palloc_get_page (PAL_USER);
+        struct frame *frame;
 
-	frame->kva = kva;      // 커널 가상 주소 저장
-	frame->page = NULL;
-	ASSERT (frame != NULL);
-	ASSERT (frame->page == NULL);
-	return frame;
+        if (kva == NULL) {
+                frame = vm_evict_frame ();     /* Reuse an evicted frame. */
+                if (frame == NULL)
+                        PANIC ("vm_get_frame: eviction failed");
+                /* The victim already has a kernel page. */
+                kva = frame->kva;
+        } else {
+                frame = malloc (sizeof *frame);
+                if (frame == NULL)
+                        PANIC ("vm_get_frame: malloc failed");
+        }
+		frame->kva = kva;      /* Kernel virtual address */
+        frame->page = NULL;
+        ASSERT (frame != NULL);
+        ASSERT (frame->page == NULL);
+        return frame;
 }
 
 /* Growing the stack. */

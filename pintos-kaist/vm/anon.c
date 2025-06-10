@@ -3,6 +3,7 @@
 #include "vm/vm.h"
 #include "devices/disk.h"
 #include <bitmap.h>
+#include <string.h>
 #include "threads/vaddr.h"
 #define SECTOR_PER_PAGE (PGSIZE / DISK_SECTOR_SIZE)
 static struct bitmap *swap_table;
@@ -50,8 +51,7 @@ anon_swap_in (struct page *page, void *kva) {
 	struct anon_page *anon_page = &page->anon;
 	lock_acquire(&swap_lock);
 	size_t page_no = anon_page->swap_index ;
-	if(anon_page->swap_index == BITMAP_ERROR) return false;
-	if (bitmap_test(swap_table, page_no) == false) {//해당 스왑슬롯이 사용중인가?
+	if (anon_page->swap_index == BITMAP_ERROR || bitmap_test(swap_table, page_no) == false) {//해당 스왑슬롯이 사용중인가?
 		lock_release(&swap_lock);
         return false;
     }
@@ -61,6 +61,7 @@ anon_swap_in (struct page *page, void *kva) {
     }
 
     bitmap_set(swap_table, page_no, false);
+	anon_page->swap_index = BITMAP_ERROR;
     lock_release(&swap_lock);
     return true;
 }
@@ -75,18 +76,19 @@ anon_swap_out (struct page *page) {
     // 할당가능한 비트 찾기.
 	size_t page_no = bitmap_scan(swap_table, 0, 1, false);
 	if (page_no == BITMAP_ERROR) {
+		lock_release (&swap_lock);
         return false;
     }
  	for (int i = 0; i < SECTOR_PER_PAGE; ++i) {
         disk_write(swap_disk, page_no * SECTOR_PER_PAGE + i, page->va + DISK_SECTOR_SIZE * i);
     }
 	bitmap_set(swap_table, page_no, true); //테이블 채웠다고 체크, pml4 클리어
-
+	anon_page->swap_index = page_no;
 	page->frame->page = NULL;
 	page->frame = NULL;
     pml4_clear_page(thread_current()->pml4, page->va);
 
-	anon_page->swap_index = page_no;
+	
 	lock_release(&swap_lock);
 	return true;
 }
@@ -99,5 +101,9 @@ anon_destroy (struct page *page) {
     //     palloc_free_page(page->frame->kva);
     // 	free(page->frame);
     // }
-	
+	 if (anon_page->swap_index != BITMAP_ERROR) {
+                lock_acquire (&swap_lock);
+                bitmap_set (swap_table, anon_page->swap_index, false);
+                lock_release (&swap_lock);
+        }
 }

@@ -1,14 +1,1 @@
-FAIL
-Kernel panic in run: PANIC at ../../threads/thread.c:672 in schedule(): assertion `is_thread (next)' failed.
-Call stack: 0x800421806c 0x8004207d89 0x80042071b7 0x8004209ef3 0x800421bf6c 0x800421d465 0x800421d1a3 0x800421d01b 0x40020e 0x400ce8
-Translation of call stack:
-0x000000800421806c: debug_panic (lib/kernel/debug.c:32)
-0x0000008004207d89: schedule (threads/thread.c:674)
-0x00000080042071b7: thread_block (threads/thread.c:308)
-0x0000008004209ef3: sema_down (threads/synch.c:68)
-0x000000800421bf6c: process_wait (userprog/process.c:366)
-0x000000800421d465: sys_wait (userprog/syscall.c:170)
-0x000000800421d1a3: syscall_handler (userprog/syscall.c:93)
-0x000000800421d01b: no_sti (userprog/syscall-entry.o:?)
-0x000000000040020e: (unknown)
-0x0000000000400ce8: (unknown)
+PASS
