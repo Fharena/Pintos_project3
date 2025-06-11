@@ -15,7 +15,7 @@
 #include "intrinsic.h"
 #include <stdio.h>
 #include "threads/thread.h"
-
+#include "threads/synch.h"
 #include "include/vm/vm.h"
 
 
@@ -207,13 +207,13 @@ sys_fork(char *thread_name, struct intr_frame *if_){
 
 bool
 sys_create(char* filename, unsigned size){
-
+lock_acquire(&file_lock);
 	check_address(filename);
 
 	if(strlen(filename) > 14) return 0;
 
 	size_t init_size = (size_t) size;
-	lock_acquire(&file_lock);
+	
 	bool result = filesys_create(filename, init_size);
 	lock_release(&file_lock);
 	return result;
@@ -478,6 +478,7 @@ struct page *check_address(void *addr){
 	return page;
 }
 
+
 void check_valid_range(void *addr, size_t size) {
     uint8_t *start = (uint8_t *)pg_round_down(addr);
     uint8_t *end = (uint8_t *)pg_round_down(addr + size - 1);
@@ -488,8 +489,8 @@ void check_valid_range(void *addr, size_t size) {
         struct page *page = spt_find_page(&thread_current()->spt, p);
         	if (page == NULL)
 		sys_exit(-1);
-		if(pml4_get_page(thread_current()->pml4, addr) == NULL){
-			if(!vm_claim_page(addr)){
+		if(pml4_get_page(thread_current()->pml4, p) == NULL){
+			if(!vm_claim_page(p)){
 				sys_exit(-1);
 			}
 		}
