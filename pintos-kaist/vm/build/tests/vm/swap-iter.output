@@ -40,8 +40,8 @@ Executing 'swap-iter':
 (swap-iter) end
 swap-iter: exit(0)
 Execution of 'swap-iter' complete.
-Timer: 4039 ticks
-Thread: 2471 idle ticks, 153 kernel ticks, 1417 user ticks
+Timer: 3892 ticks
+Thread: 2334 idle ticks, 154 kernel ticks, 1405 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 11858 reads, 15902 writes
 hd1:0: 7932 reads, 0 writes

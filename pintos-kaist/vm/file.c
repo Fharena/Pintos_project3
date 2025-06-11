@@ -103,12 +103,12 @@ file_backed_destroy (struct page *page) {
 	        struct file_page *file_page = &page->file;
         if (page->frame != NULL) {
                 if (pml4_is_dirty (thread_current()->pml4, page->va)) {
-						lock_acquire(&filesys_lock);
+						lock_acquire(&file_lock);
                         file_write_at (file_page->file, page->frame->kva,
                                        file_page->read_bytes, file_page->offset);
 						
                         pml4_set_dirty (thread_current()->pml4, page->va, false);
-						lock_release(&filesys_lock);
+						lock_release(&file_lock);
                 }
                 pml4_clear_page (thread_current()->pml4, page->va);
                 palloc_free_page (page->frame->kva);
